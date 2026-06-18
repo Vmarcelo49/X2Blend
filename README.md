@@ -504,6 +504,14 @@ so textures appear right-side up on the model.  This is the standard fix
 for all DirectX-to-Blender conversions.  Use `--no-flip-uv` to disable
 it if your .X file already uses the OpenGL convention (rare).
 
+**Image packing:** All loaded textures are **packed into the .blend file**
+at import time (`image.pack()`).  This makes the .blend self-contained —
+you can move or share it without losing the textures.  Without packing,
+Blender only stores a filepath reference (e.g. `//assets/mion/服.bmp`),
+and when the .blend is opened on another machine or the textures are
+moved, the images show as "missing" and materials appear empty in the
+Properties panel.
+
 ### 11. Validation
 
 The verification scripts numerically compare the matrices in a `.blend`

@@ -300,7 +300,24 @@ def main():
     else:
         _log.info("No animations to build.")
 
-    # --- 6. Save ---
+    # --- 6. Pack all images into the .blend (make it self-contained) ---
+    # Even though materials.py packs each image as it loads, this is a
+    # safety net: any images created by other means (e.g. loaded by
+    # Blender's image browser) will also be packed.  Without packing,
+    # the .blend only stores filepath references, and when opened on
+    # another machine (or if textures are moved), images are "missing".
+    packed_count = 0
+    for img in bpy.data.images:
+        if not img.packed_file:
+            try:
+                img.pack()
+                packed_count += 1
+            except (RuntimeError, AttributeError):
+                pass
+    if packed_count:
+        _log.info("Packed %d image(s) into the blend file.", packed_count)
+
+    # --- 7. Save ---
     _log.info("Saving blend file: %s", blend_path)
     bpy.ops.wm.save_as_mainfile(filepath=os.path.abspath(blend_path))
     print(f"[blend_importer] Done: {blend_path}")
