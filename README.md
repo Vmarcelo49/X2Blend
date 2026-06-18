@@ -455,7 +455,48 @@ Controls:
 - **Cycle Animations**: Spacebar or left/right arrows
 - **Reset Camera**: `R`
 
-### 10. Validation
+### 10. Textures
+
+The `.X` file references textures by filename (often just the bare name,
+e.g. `服.bmp` for Higurashi Daybreak assets — Shift-JIS decoded to UTF-8
+by the C++ side).  The importer resolves texture paths automatically:
+
+1. **Absolute path** — used directly if the file exists.
+2. **Relative to the .X source directory** — if the .X file was at
+   `/path/to/assets/00.X`, a texture `服.bmp` is looked up at
+   `/path/to/assets/服.bmp`.  This matches how D3DX itself resolves
+   textures at load time, and is the most common case (textures placed
+   alongside the .X file).
+3. **Current working directory** — fallback if not found in the .X
+   directory (preserves backward compatibility).
+
+**Supported formats:** Blender loads BMP, PNG, JPEG, TIFF, TGA, and DDS
+natively.  The Higurashi Daybreak assets use **BMP**, which works out of
+the box — no conversion needed.
+
+**Logging:** The importer reports each texture load (or failure) at INFO
+level:
+
+```
+[blend_importer] INFO   Material 'Material__133_headSub8': loaded texture '服.bmp' from /path/to/assets/服.bmp
+[blend_importer] INFO   Materials: 5 textures loaded, 0 missing
+```
+
+If a texture is not found, the importer logs where it looked and creates
+a placeholder image-texture node (with the filename as a label) so the
+material slot exists:
+
+```
+[blend_importer] WARNING  Material 'Material__133_headSub8': texture '服.bmp' not found.
+                          Looked in: '/path/to/assets' (X source dir) and '/cwd' (cwd).
+                          Creating placeholder node.
+```
+
+**No `--texture-dir` flag is needed** — just place the textures in the
+same folder as the .X file (the standard layout), and the importer finds
+them automatically.
+
+### 11. Validation
 
 The verification scripts numerically compare the matrices in a `.blend`
 against the source `.x` file's D3DX-computed reference matrices.

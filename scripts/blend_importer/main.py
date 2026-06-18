@@ -259,7 +259,8 @@ def main():
     _log.info("Building %d mesh(es) (max_influences=%d)...",
               len(meshes_data), max_influences)
     for idx, mesh_data in enumerate(meshes_data):
-        build_mesh_object(mesh_data, arm_obj, nodes_data, idx, max_influences)
+        build_mesh_object(mesh_data, arm_obj, nodes_data, idx, max_influences,
+                          source_x_path=source_file)
 
     # --- 4. Scale adjustment ---
     # Apply root scale to all root objects (objects with no parent).
