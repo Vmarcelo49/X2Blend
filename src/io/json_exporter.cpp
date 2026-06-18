@@ -1,8 +1,28 @@
-#include "json_exporter.h"
+// json_exporter.cpp — Hand-rolled JSON serializer for XModel.
+//
+// Port of the original json_exporter.cpp.  The section writers
+// (writeMeta, writeMaterials, writeVertices, writeIndices, writeMeshes,
+// writeNodes, writeAnimations) and the JSON helpers (jf, jvec3, jvec4,
+// jmat4, jstr) are preserved verbatim from the original so that the JSON
+// bytes for a given XModel are reproducible.  Two changes:
+//
+//   1. A new writeMeta() emits the `meta` block at the top of the JSON
+//      (before `root_node_index`), carrying pipeline configuration from
+//      the C++ loader to the Python importer.
+//   2. The two error-path `std::cerr` calls in exportToFile() are replaced
+//      with LOG_ERROR from core/log.h.
+//
+// The dead `use_trs` field is no longer emitted in writeNodes() because
+// XNode::useTRS has been removed from the data model.
+#include "io/json_exporter.h"
+
+#include "core/log.h"
+#include "core/middleman.h"
+
 #include <fstream>
-#include <sstream>
 #include <iomanip>
-#include <iostream>
+#include <sstream>
+#include <string>
 
 // ---------------------------------------------------------------------------
 // Minimal hand-written JSON helpers — no external dependency required.
@@ -71,6 +91,23 @@ static std::string jstr(const std::string& s) {
 // ---------------------------------------------------------------------------
 // Section writers — each appends to `out`
 // ---------------------------------------------------------------------------
+
+// Writes the pipeline metadata block.  Field order matches the contract in
+// docs/ANALYSIS.md: source_file, bake_mode, bake_fps, source_ticks_per_second,
+// max_influences, x2blend_version.  `source_ticks_per_second` is emitted as
+// an integer (it is a double in the struct but always a whole number of
+// ticks in practice); the other numeric fields use the same jf()/direct
+// formatting as the rest of the JSON so the output stays consistent.
+static void writeMeta(std::ostream& out, const XModelMeta& m) {
+    out << "{"
+        << "\"source_file\":" << jstr(m.sourceFile) << ","
+        << "\"bake_mode\":" << jstr(m.bakeMode) << ","
+        << "\"bake_fps\":" << jf(m.bakeFps) << ","
+        << "\"source_ticks_per_second\":" << static_cast<long long>(m.sourceTicksPerSecond) << ","
+        << "\"max_influences\":" << m.maxInfluences << ","
+        << "\"x2blend_version\":" << jstr(m.x2blendVersion)
+        << "}";
+}
 
 static void writeMaterials(std::ostream& out, const std::vector<XMaterial>& mats) {
     out << "[";
@@ -174,7 +211,6 @@ static void writeNodes(std::ostream& out, const std::vector<XNode>& nodes) {
             << "\"mesh_index\":" << n.meshIndex << ","
             << "\"is_bone\":" << (n.isBone ? "true" : "false") << ","
             << "\"local_transform\":" << jmat4(n.localTransform) << ","
-            << "\"use_trs\":" << (n.useTRS ? "true" : "false") << ","
             << "\"translation\":" << jvec3(n.translation) << ","
             << "\"rotation\":" << jvec4(n.rotation.x, n.rotation.y, n.rotation.z, n.rotation.w) << ","
             << "\"scale\":" << jvec3(n.scale)
@@ -237,12 +273,16 @@ static void writeAnimations(std::ostream& out, const std::vector<XAnimation>& an
 bool JsonExporter::exportToFile(const XModel& model, const std::string& filepath) {
     std::ofstream out(filepath);
     if (!out.is_open()) {
-        std::cerr << "[JsonExporter] Cannot open output file: " << filepath << "\n";
+        LOG_ERROR("[JsonExporter] Cannot open output file: " + filepath);
         return false;
     }
 
     out << "{";
-    out << "\"root_node_index\":" << model.rootNodeIndex << ",";
+    // Meta block first — carries pipeline configuration for the Python
+    // importer (bake mode, bake FPS, source ticks-per-second, ...).
+    out << "\"meta\":";
+    writeMeta(out, model.meta);
+    out << ",\"root_node_index\":" << model.rootNodeIndex << ",";
     out << "\"nodes\":";
     writeNodes(out, model.nodes);
     out << ",\"meshes\":";
@@ -252,7 +292,7 @@ bool JsonExporter::exportToFile(const XModel& model, const std::string& filepath
     out << "}\n";
 
     if (!out.good()) {
-        std::cerr << "[JsonExporter] Write error for: " << filepath << "\n";
+        LOG_ERROR("[JsonExporter] Write error for: " + filepath);
         return false;
     }
 

@@ -2,12 +2,27 @@
 """
 verify_bones.py
 ========================================================
-Verification script to check if the bone conversion data is correct on XtoBlend.
-Compares the expected world/bind matrices from the JSON model definition against
-the actual bone matrices in the generated .blend file.
+Verification script to check if the bone conversion data is correct on
+XtoBlend.  Compares the expected world/bind matrices from the JSON model
+definition against the actual bone matrices in the generated .blend file.
+
+This is a light refactor of the original ``scripts/verify_bones.py``.
+Changes vs. the original:
+
+  - Lives under ``scripts/verify/`` instead of ``scripts/``.
+  - Usage banner updated to reflect the new path.
+  - ``mat4_to_mathutils`` is duplicated locally (with this comment) so
+    the script remains standalone-runnable inside Blender's bundled
+    Python without requiring the ``blend_importer`` package to be on
+    ``sys.path``.  The canonical copy lives in
+    ``scripts/blend_importer/math_utils.py`` — keep the two in sync if
+    you edit the matrix conversion.
+
+Mathematical behavior is identical to the original.
 
 Usage:
-    blender --background --python scripts/verify_bones.py -- <model.json> <output.blend> [report.txt]
+    blender --background --python scripts/verify/verify_bones.py -- \\
+        <model.json> <output.blend> [report.txt]
 """
 
 import sys
@@ -15,18 +30,31 @@ import json
 import os
 import math
 
-# Try to import bpy and mathutils
+# Try to import bpy and mathutils.  These scripts run inside Blender's
+# bundled Python; if bpy is missing the user has invoked us from the
+# wrong interpreter.
 try:
     import bpy
     import mathutils
 except ImportError:
-    sys.exit("[verify_bones] ERROR: 'bpy' not found. This script must be run inside Blender.")
+    sys.exit("[verify_bones] ERROR: 'bpy' not found. "
+             "This script must be run inside Blender.")
 
+
+# ---------------------------------------------------------------------------
+# Local copy of mat4_to_mathutils — duplicated from
+# scripts/blend_importer/math_utils.py for standalone execution.
+# Keep in sync if you edit the matrix conversion logic.
+# ---------------------------------------------------------------------------
 
 def mat4_to_mathutils(rows):
     """Convert a DirectX/D3DX row-vector matrix to Blender's column-vector matrix."""
     return mathutils.Matrix([rows[r] for r in range(4)]).transposed()
 
+
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
 
 def get_expected_parent_bone(nodes, parent_idx):
     """Find the first ancestor node in the JSON hierarchy that is designated as a bone."""
@@ -58,14 +86,20 @@ def compare_matrices(actual, expected):
     return pos_diff, rot_diff
 
 
+# ---------------------------------------------------------------------------
+# Main
+# ---------------------------------------------------------------------------
+
 def main():
-    # Parse arguments after '--'
+    # Parse arguments after '--' (Blender's --python convention).
     args = []
     if "--" in sys.argv:
         args = sys.argv[sys.argv.index("--") + 1:]
 
     if len(args) < 2:
-        print("[verify_bones] Usage: blender --background --python verify_bones.py -- <model.json> <output.blend> [report.txt]")
+        print("[verify_bones] Usage: blender --background --python "
+              "scripts/verify/verify_bones.py -- <model.json> <output.blend> "
+              "[report.txt]")
         sys.exit(1)
 
     json_path = args[0]
@@ -227,7 +261,9 @@ def main():
             rf.write("\n".join(report_lines) + "\n")
         print(f"[verify_bones] Saved detailed report to: {report_path}")
 
-    # Determine exit code (fail if missing bones, parent mismatch, or significant matrix mismatch)
+    # Determine exit code (fail if missing bones, parent mismatch, or
+    # significant matrix mismatch).  Thresholds: 1e-4 units for
+    # translation, 0.5 degrees for rotation.
     success = True
     if summary_data["missing_bones"]:
         print("[verify_bones] FAILED: Missing bones found.")
@@ -235,7 +271,6 @@ def main():
     if summary_data["mismatched_parents"]:
         print("[verify_bones] FAILED: Parent hierarchy mismatch found.")
         success = False
-    # Threshold for errors: 1e-4 units for translation, 0.5 degrees for rotation
     if summary_data["max_frame_pos_err"] > 1e-4 or summary_data["max_frame_rot_err"] > 0.5:
         print("[verify_bones] FAILED: Bone rest pose diverges from expected frame world matrix.")
         success = False

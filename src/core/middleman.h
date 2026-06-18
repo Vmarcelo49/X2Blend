@@ -1,12 +1,35 @@
+// middleman.h — Pure-data intermediate model for X2Blend.
+//
+// Declares the dependency-free struct hierarchy (XVector3, XQuaternion,
+// XMatrix4x4, XMaterial, XVertex, XMesh, XNode, animation keys, XAnimation,
+// XModel) that flows from the C++/D3DX loader to the JSON serializer.
+// Kept at global scope (no namespace) for compatibility with the original
+// project and with D3DX consumers that include this header transitively.
 #pragma once
 
-#include <string>
-#include <vector>
 #include <array>
 #include <cstdint>
+#include <string>
+#include <vector>
 
-// Simple, decoupled math structures for the Middleman representation
+// ---------------------------------------------------------------------------
+// Metadata block — carries pipeline configuration from the C++ loader to the
+// Python importer so the Python side does not have to guess (e.g. bake FPS,
+// source ticks-per-second, max skin influences).  Serialized as the "meta"
+// object at the top of the JSON output.
+// ---------------------------------------------------------------------------
+struct XModelMeta {
+    std::string sourceFile;            // path of the .x file this model came from
+    std::string bakeMode;              // "baked" or "keyframed"
+    float       bakeFps = 60.0f;       // sample rate used when bakeMode == "baked"
+    double      sourceTicksPerSecond = 4800.0;  // D3DX animation set ticks/sec
+    int         maxInfluences = 4;     // cap on bone weights per vertex
+    std::string x2blendVersion;        // exporter version string
+};
 
+// ---------------------------------------------------------------------------
+// Simple, decoupled math structures for the Middleman representation.
+// ---------------------------------------------------------------------------
 struct XVector3 {
     float x = 0.0f;
     float y = 0.0f;
@@ -53,7 +76,7 @@ struct XMesh {
     std::vector<uint32_t> indices;
     std::vector<XMaterial> materials;
     std::vector<uint32_t> faceMaterialIndices; // Materials per-face (if multi-material)
-    
+
     // Skinning data
     bool hasSkin = false;
     std::vector<std::string> boneNames;          // List of bones that influence this mesh
@@ -63,19 +86,20 @@ struct XMesh {
 struct XNode {
     std::string name;
     XMatrix4x4 localTransform;
-    
-    // Decomposed TRS fields
+
+    // Decomposed TRS fields (rest pose). The legacy `useTRS` flag from the
+    // original project has been removed: it was set but never read by the
+    // Python importer, so it was dead code.
     XVector3 translation{0.0f, 0.0f, 0.0f};
     XQuaternion rotation{0.0f, 0.0f, 0.0f, 1.0f};
     XVector3 scale{1.0f, 1.0f, 1.0f};
-    bool useTRS = false;
 
     int parentIndex = -1;
     std::vector<int> childrenIndices;
-    
+
     // Attachment indices
     int meshIndex = -1; // Index in XModel's meshes list (-1 if none)
-    
+
     // Flag to determine if this node represents a bone in a skeleton
     bool isBone = false;
 };
@@ -98,7 +122,7 @@ struct XKeyframeMatrix {
 struct XAnimationChannel {
     std::string targetNodeName; // Name of the target node (bone)
     int targetNodeIndex = -1;   // Resolved index in XModel's nodes list
-    
+
     std::vector<XKeyframeVector3> translationKeys;
     std::vector<XKeyframeQuaternion> rotationKeys;
     std::vector<XKeyframeVector3> scaleKeys;
@@ -116,7 +140,10 @@ struct XModel {
     std::vector<XNode> nodes;
     std::vector<XMesh> meshes;
     std::vector<XAnimation> animations;
-    
+
+    // Pipeline metadata (source file, bake config, version, ...).
+    XModelMeta meta;
+
     // Root node index
     int rootNodeIndex = -1;
 };
