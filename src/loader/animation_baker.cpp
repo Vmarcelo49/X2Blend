@@ -125,6 +125,32 @@ std::map<std::string, size_t> ensureChannelsForAllNodes(XAnimation& xanim,
     return nodeNameToChannelIdx;
 }
 
+// Reset the animation controller to a clean state before baking each
+// animation set.  The D3DX controller can carry over state from the .X
+// file's original track setup (multiple tracks enabled, blended weights,
+// accumulated global time) which causes subsequent animation sets to be
+// sampled incorrectly — often producing identical output for all sets.
+//
+// This function:
+//   1. Disables ALL tracks except track 0.
+//   2. Resets track 0's speed/weight/position to defaults.
+//   3. Advances time by 0 to flush any pending state.
+//
+// Must be called before SetTrackAnimationSet for each animation set.
+void resetControllerForBaking(ID3DXAnimationController* pAnimController) {
+    DWORD maxTracks = pAnimController->GetMaxNumAnimationSets();
+    for (DWORD t = 0; t < maxTracks; ++t) {
+        pAnimController->SetTrackEnable(t, FALSE);
+    }
+    // Re-enable only track 0 with clean settings.
+    pAnimController->SetTrackEnable(0, TRUE);
+    pAnimController->SetTrackWeight(0, 1.0f);
+    pAnimController->SetTrackSpeed(0, 1.0f);
+    pAnimController->SetTrackPosition(0, 0.0);
+    // Flush any accumulated global time / pending evaluations.
+    pAnimController->AdvanceTime(0.0, nullptr);
+}
+
 } // namespace
 
 void AnimationBaker::bake(ID3DXAnimationController* pAnimController, XModel& model,
@@ -148,6 +174,12 @@ void AnimationBaker::bake(ID3DXAnimationController* pAnimController, XModel& mod
         LPCSTR pSetName = pSet->GetName();
         xanim.name     = pSetName ? shiftJisToUtf8(pSetName) : "Animation_" + std::to_string(s);
         xanim.duration = static_cast<float>(pSet->GetPeriod());
+
+        // Reset the controller to a clean state before each animation set.
+        // Without this, the controller can carry over track state from the
+        // previous set (or from the .X file's original track setup), causing
+        // all animations to be sampled identically.
+        resetControllerForBaking(pAnimController);
 
         if (opts.bake) {
             // Dense path: sample at fixed FPS.

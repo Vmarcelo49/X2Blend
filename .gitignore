@@ -1,6 +1,6 @@
 *.X
 *.json
-*.blend
+*.blend*
 /assets
 /build
 /.venv
