@@ -184,6 +184,7 @@ all extra flags go to Stage 1.
 | `--decimate N` | (off) | Decimation ratio (`--decimate-mode ratio`) or absolute error tolerance (`--decimate-mode error`). |
 | `--decimate-mode ratio\|error` | `ratio` | `ratio` uses `bpy.ops.graph.decimate` (fragile headless); `error` uses manual Ramer-Douglas-Peucker (headless-safe). |
 | `--no-decimate` | (off) | Disable decimation; overrides `--decimate`. |
+| `--no-flip-uv` | (off) | Disable UV V-coordinate flipping (on by default — DirectX uses V=0 at top, Blender uses V=0 at bottom). |
 | `--visual-tails` | (off) | Use child-directed bone tails (visually correct, **breaks skinning**). See "Bone tail direction" below. |
 | `--bone-axis <auto\|x\|y\|z>` | `auto` | Which local axis the .X file uses for bone direction. `auto` detects from hierarchy (3ds Max Biped=X, Maya=Y). See "Bone axis correction" below. |
 | `--log-level <level>` | `INFO` | One of `DEBUG`, `INFO`, `WARN`, `ERROR`. Use `DEBUG` to see bone axis-alignment diagnostics. |
@@ -495,6 +496,13 @@ material slot exists:
 **No `--texture-dir` flag is needed** — just place the textures in the
 same folder as the .X file (the standard layout), and the importer finds
 them automatically.
+
+**UV V-coordinate flip:** DirectX uses V=0 at the TOP of the texture
+(like image coordinates), while Blender uses V=0 at the BOTTOM (OpenGL
+convention).  The importer flips V by default (`v_blender = 1.0 - v_d3dx`)
+so textures appear right-side up on the model.  This is the standard fix
+for all DirectX-to-Blender conversions.  Use `--no-flip-uv` to disable
+it if your .X file already uses the OpenGL convention (rare).
 
 ### 11. Validation
 

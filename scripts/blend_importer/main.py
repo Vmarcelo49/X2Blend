@@ -114,6 +114,15 @@ def _build_arg_parser():
         help="Explicitly disable decimation (overrides --decimate).",
     )
     parser.add_argument(
+        "--no-flip-uv", action="store_true",
+        help=("Disable UV V-coordinate flipping.  By default, V is flipped "
+              "(v_blender = 1.0 - v_d3dx) because DirectX uses V=0 at the "
+              "top of the texture while Blender uses V=0 at the bottom "
+              "(OpenGL convention).  This is the standard fix for all "
+              "DirectX-to-Blender conversions.  Use --no-flip-uv only if "
+              "your .X file already uses the OpenGL convention (rare)."),
+    )
+    parser.add_argument(
         "--visual-tails", action="store_true",
         help=("Use child-directed bone tails (point towards the nearest "
               "child bone) for visually-correct bone orientation.  WARNING: "
@@ -256,11 +265,12 @@ def main():
         _log.info("No bones found; skipping armature build.")
 
     # --- 3. Meshes ---
-    _log.info("Building %d mesh(es) (max_influences=%d)...",
-              len(meshes_data), max_influences)
+    flip_uv = not args.no_flip_uv
+    _log.info("Building %d mesh(es) (max_influences=%d, flip_uv=%s)...",
+              len(meshes_data), max_influences, flip_uv)
     for idx, mesh_data in enumerate(meshes_data):
         build_mesh_object(mesh_data, arm_obj, nodes_data, idx, max_influences,
-                          source_x_path=source_file)
+                          source_x_path=source_file, flip_uv=flip_uv)
 
     # --- 4. Scale adjustment ---
     # Apply root scale to all root objects (objects with no parent).

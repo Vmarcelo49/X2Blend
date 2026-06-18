@@ -22,7 +22,7 @@ _log = logging.getLogger(__name__)
 
 
 def build_mesh_object(mesh_data, arm_obj, nodes_data, mesh_index,
-                      max_influences=4, source_x_path=None):
+                      max_influences=4, source_x_path=None, flip_uv=True):
     """
     Build a single Blender mesh object from a JSON mesh dict.
 
@@ -61,6 +61,15 @@ def build_mesh_object(mesh_data, arm_obj, nodes_data, mesh_index,
     positions = [tuple(v["p"]) for v in vertices]
     normals   = [tuple(v["n"]) for v in vertices]
     uvs_raw   = [tuple(v["uv"]) for v in vertices]
+
+    # DirectX uses V=0 at the TOP of the texture (like image coordinates).
+    # Blender uses V=0 at the BOTTOM (OpenGL convention).  Flip V so
+    # textures appear right-side up on the model.  This is the standard
+    # fix for all DirectX-to-Blender conversions.
+    # Can be disabled with --no-flip-uv for .X files that already use
+    # the OpenGL convention (rare).
+    if flip_uv:
+        uvs_raw = [(u, 1.0 - v) for u, v in uvs_raw]
 
     # Indices come as a flat triangle list (3 per face).
     if len(indices) % 3 != 0:
