@@ -114,6 +114,18 @@ def _build_arg_parser():
         help="Explicitly disable decimation (overrides --decimate).",
     )
     parser.add_argument(
+        "--emissive-strength", type=float, default=0.0,
+        help=("Emission Strength for materials with emissive colors. "
+              "Old anime games (DirectX 9) commonly use high Emissive "
+              "values as 'baked lighting' to make characters visible "
+              "without dynamic lights.  In Blender Material Preview, this "
+              "adds to HDRI lighting and makes the model ~2x brighter than "
+              "intended.  Default: 0.0 (emissive color preserved but not "
+              "applied as light — matches the game's appearance under "
+              "Solid mode).  Set to 1.0 to restore the original game's "
+              "bright look in Material Preview / Rendered mode."),
+    )
+    parser.add_argument(
         "--no-flip-uv", action="store_true",
         help=("Disable UV V-coordinate flipping.  By default, V is flipped "
               "(v_blender = 1.0 - v_d3dx) because DirectX uses V=0 at the "
@@ -266,11 +278,12 @@ def main():
 
     # --- 3. Meshes ---
     flip_uv = not args.no_flip_uv
-    _log.info("Building %d mesh(es) (max_influences=%d, flip_uv=%s)...",
-              len(meshes_data), max_influences, flip_uv)
+    _log.info("Building %d mesh(es) (max_influences=%d, flip_uv=%s, emissive_strength=%s)...",
+              len(meshes_data), max_influences, flip_uv, args.emissive_strength)
     for idx, mesh_data in enumerate(meshes_data):
         build_mesh_object(mesh_data, arm_obj, nodes_data, idx, max_influences,
-                          source_x_path=source_file, flip_uv=flip_uv)
+                          source_x_path=source_file, flip_uv=flip_uv,
+                          emissive_strength=args.emissive_strength)
 
     # --- 4. Scale adjustment ---
     # Apply root scale to all root objects (objects with no parent).

@@ -87,7 +87,7 @@ def _set_input_safe(bsdf, input_names, value):
     return False
 
 
-def build_materials(mat_defs, source_x_path=None):
+def build_materials(mat_defs, source_x_path=None, emissive_strength=0.0):
     """Build Blender materials from the JSON mesh's ``materials`` list.
 
     Each material gets:
@@ -163,9 +163,16 @@ def build_materials(mat_defs, source_x_path=None):
         _set_input_safe(bsdf, ["Roughness"], roughness)
 
         # Emission (name changed between Blender 3.x and 4.x).
+        # Old anime games (DirectX 9) commonly use high Emissive values
+        # as 'baked lighting' to make characters visible without dynamic
+        # light sources.  In Blender Material Preview, this adds to the
+        # HDRI lighting, making the model appear ~2x brighter than intended.
+        # By default, Emission Strength = 0 (color preserved but not applied).
+        # Use --emissive-strength N to restore the original game look.
         em = md.get("emissive", [0, 0, 0])
         _set_input_safe(bsdf, ["Emission Color", "Emission"],
                         (em[0], em[1], em[2], 1.0))
+        _set_input_safe(bsdf, ["Emission Strength"], emissive_strength)
 
         # --- Texture (Image Texture node wired into Base Color) ---
         tex_file = md.get("texture", "")

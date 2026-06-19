@@ -185,6 +185,7 @@ all extra flags go to Stage 1.
 | `--decimate-mode ratio\|error` | `ratio` | `ratio` uses `bpy.ops.graph.decimate` (fragile headless); `error` uses manual Ramer-Douglas-Peucker (headless-safe). |
 | `--no-decimate` | (off) | Disable decimation; overrides `--decimate`. |
 | `--no-flip-uv` | (off) | Disable UV V-coordinate flipping (on by default — DirectX uses V=0 at top, Blender uses V=0 at bottom). |
+| `--emissive-strength N` | `0.0` | Emission Strength for materials. Old anime games use high Emissive values as "baked lighting"; default 0.0 preserves the color but doesn't apply it as light (matches Solid mode). Set to 1.0 for the original game's bright look in Material Preview. |
 | `--visual-tails` | (off) | Use child-directed bone tails (visually correct, **breaks skinning**). See "Bone tail direction" below. |
 | `--bone-axis <auto\|x\|y\|z>` | `auto` | Which local axis the .X file uses for bone direction. `auto` detects from hierarchy (3ds Max Biped=X, Maya=Y). See "Bone axis correction" below. |
 | `--log-level <level>` | `INFO` | One of `DEBUG`, `INFO`, `WARN`, `ERROR`. Use `DEBUG` to see bone axis-alignment diagnostics. |

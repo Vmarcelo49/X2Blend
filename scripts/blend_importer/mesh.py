@@ -22,7 +22,8 @@ _log = logging.getLogger(__name__)
 
 
 def build_mesh_object(mesh_data, arm_obj, nodes_data, mesh_index,
-                      max_influences=4, source_x_path=None, flip_uv=True):
+                      max_influences=4, source_x_path=None, flip_uv=True,
+                      emissive_strength=0.0):
     """
     Build a single Blender mesh object from a JSON mesh dict.
 
@@ -103,7 +104,8 @@ def build_mesh_object(mesh_data, arm_obj, nodes_data, mesh_index,
 
     # Materials.  Pass source_x_path so texture paths can be resolved
     # against the .X source directory.
-    mats = build_materials(mat_defs, source_x_path=source_x_path)
+    mats = build_materials(mat_defs, source_x_path=source_x_path,
+                           emissive_strength=emissive_strength)
     for m in mats:
         me.materials.append(m)
 
