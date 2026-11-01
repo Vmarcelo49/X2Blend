@@ -1,0 +1,16 @@
+schema_version = "1.0.0"
+
+id = "x2blend"
+version = "2.0.0"
+name = "X2Blend"
+tagline = "Import DirectX .X models with their original animation keys"
+maintainer = "Vmarcelo49"
+type = "add-on"
+website = "https://github.com/Vmarcelo49/X2Blend"
+tags = ["Import-Export", "Animation"]
+blender_version_min = "5.0.0"
+license = ["SPDX:LicenseRef-Golden-Witch"]
+copyright = ["1986 The Endless Gameboard"]
+
+[build]
+paths_exclude_pattern = ["__pycache__/", "/.git/"]
